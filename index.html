@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Table Contact Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        input[type="text"],
+        input[type="tel"],
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .contacts {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .contact {
+            padding: 10px;
+            background-color: #e7f3e7;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Hash Table Contact Manager</h1>
+        <input type="text" id="name" placeholder="Name">
+        <input type="tel" id="phone" placeholder="Phone">
+        <input type="text" id="address" placeholder="Address">
+        <button onclick="addContact()">Add Contact</button>
+        <button onclick="listContacts()">List Contacts</button>
+
+        <h2>Find / Update / Delete Contact</h2>
+        <input type="text" id="searchName" placeholder="Name to Find/Update/Delete">
+        <button onclick="findContact()">Find Contact</button>
+        <button onclick="updateContact()">Update Contact</button>
+        <button onclick="deleteContact()">Delete Contact</button>
+
+        <div class="contacts" id="contactList"></div>
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        class Contact {
+            constructor(name, phone, address) {
+                this.name = name;
+                this.phone = phone;
+                this.address = address;
+            }
+
+            toString() {
+                return `${this.name}, ${this.phone}, ${this.address}`;
+            }
+        }
+
+        class HashTable {
+            constructor(size = 10) {
+                this.size = size;
+                this.table = new Array(size).fill(null);
+                this.deleted = Symbol("deleted");
+            }
+
+            hash(key) {
+                return Array.from(key).reduce((sum, char) => sum + char.charCodeAt(0), 0) % this.size;
+            }
+
+            add(contact) {
+                let index = this.hash(contact.name);
+                while (this.table[index] !== null && this.table[index] !== this.deleted) {
+                    index = (index + 1) % this.size;
+                }
+                this.table[index] = contact;
+            }
+
+            find(name) {
+                let index = this.hash(name);
+                let start = index;
+                while (this.table[index] !== null) {
+                    if (this.table[index] !== this.deleted && this.table[index].name === name) {
+                        return this.table[index];
+                    }
+                    index = (index + 1) % this.size;
+                    if (index === start) break;
+                }
+                return null;
+            }
+
+            delete(name) {
+                let index = this.hash(name);
+                let start = index;
+                while (this.table[index] !== null) {
+                    if (this.table[index] !== this.deleted && this.table[index].name === name) {
+                        this.table[index] = this.deleted;
+                        return true;
+                    }
+                    index = (index + 1) % this.size;
+                    if (index === start) break;
+                }
+                return false;
+            }
+
+            list() {
+                return this.table.filter(entry => entry !== null && entry !== this.deleted);
+            }
+        }
+
+        const hashTable = new HashTable();
+
+        function addContact() {
+            const name = document.getElementById("name").value;
+            const phone = document.getElementById("phone").value;
+            const address = document.getElementById("address").value;
+
+            if (!name || !phone || !address) {
+                showError("All fields are required.");
+                return;
+            }
+
+            const contact = new Contact(name, phone, address);
+            hashTable.add(contact);
+            listContacts();
+            clearError();
+            clearInputs();
+        }
+
+        function findContact() {
+            const name = document.getElementById("searchName").value;
+            const contact = hashTable.find(name);
+            if (contact) {
+                document.getElementById("contactList").innerHTML = `<div class='contact'>${contact.toString()}</div>`;
+                clearError();
+            } else {
+                showError("Contact not found.");
+            }
+        }
+
+        function deleteContact() {
+            const name = document.getElementById("searchName").value;
+            if (hashTable.delete(name)) {
+                listContacts();
+                clearError();
+            } else {
+                showError("Contact not found.");
+            }
+        }
+
+        function updateContact() {
+            const name = document.getElementById("searchName").value;
+            const phone = document.getElementById("phone").value;
+            const address = document.getElementById("address").value;
+            const contact = hashTable.find(name);
+
+            if (contact) {
+                contact.phone = phone;
+                contact.address = address;
+                listContacts();
+                clearError();
+                clearInputs();
+            } else {
+                showError("Contact not found.");
+            }
+        }
+
+        function listContacts() {
+            const contacts = hashTable.list();
+            document.getElementById("contactList").innerHTML = contacts.map(c => `<div class='contact'>${c.toString()}</div>`).join('');
+        }
+
+        function showError(message) {
+            document.getElementById("error").textContent = message;
+        }
+
+        function clearError() {
+            document.getElementById("error").textContent = "";
+        }
+
+        function clearInputs() {
+            document.getElementById("name").value = "";
+            document.getElementById("phone").value = "";
+            document.getElementById("address").value = "";
+            document.getElementById("searchName").value = "";
+        }
+    </script>
+</body>
+
+</html>
